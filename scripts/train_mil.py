@@ -27,6 +27,7 @@ Usage:  py -3.12 scripts\\train_mil.py                 (DinoBloom-B, 5-fold CV)
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -188,6 +189,11 @@ def main():
     tag = f"model_b_{a.features}_{a.scheme}" + ("_border" if a.keep_border else "")
     out = a.root / "results" / tag
     (out / "attention").mkdir(parents=True, exist_ok=True)
+    (out / "models").mkdir(exist_ok=True)
+    (out / "config.json").write_text(json.dumps(dict(
+        model="gated-attention MIL", features=f"dinobloom_{a.features}", scheme=a.scheme, keep_border=a.keep_border,
+        epochs=EPOCHS, lr=LR, weight_decay=WD, max_cells=MAX_CELLS, seeds=list(SEEDS), pseudo_fields=PSEUDO_FIELDS,
+        in_dim=int(dim), hidden=256, attention=128, dropout=0.25, torch=torch.__version__), indent=1))
     print(f"{len(folds)} fields, {sum(len(f) for f in fields.values())} cells, {len(bags)} bags "
           f"({(bags.role == 'cv').sum()} CV patients); feature size {dim}")
 
@@ -201,6 +207,8 @@ def main():
     for k, tr, te in splits:
         tr = tr[tr.n_cells > 0].reset_index(drop=True)
         models = [train_one(tr, fields, dim, s) for s in SEEDS]
+        for s_, m in zip(SEEDS, models):   # keep fold models: any later analysis without retraining
+            torch.save(m.state_dict(), out / "models" / f"{'fold' + str(k) if k >= 0 else 'external'}_seed{s_}.pt")
         for b in te.itertuples():
             if b.n_cells == 0:   # no usable white cells in any field: no prediction, counted as an error
                 pat_rows.append(dict(patient_code=b.bag, fold=k, set=b.set, label5=b.label5,
