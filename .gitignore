@@ -1,0 +1,49 @@
+# ---------------------------------------------------------------
+# PATIENT DATA MUST NEVER BE COMMITTED.
+# Keep data OUTSIDE this repo:  Leukobloom\data  and  Leukobloom\inventory_out
+# These rules are a second line of defence.
+# ---------------------------------------------------------------
+
+# Images (any case)
+*.[jJ][pP][gG]
+*.[jJ][pP][eE][gG]
+*.[pP][nN][gG]
+*.[tT][iI][fF]
+*.[tT][iI][fF][fF]
+*.[bB][mM][pP]
+*.svs
+*.ndpi
+
+# Data and derived-data folders
+data/
+inventory_out/
+outputs/
+results/
+crops/
+features/
+embeddings/
+*PRIVATE*
+*private*
+
+# Dataset tables and derived arrays (may describe or be derived from patient images)
+*.csv
+*.xlsx
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.parquet
+
+# Python / OS clutter
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+desktop.ini
+Thumbs.db
+.DS_Store
