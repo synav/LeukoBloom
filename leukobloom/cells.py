@@ -57,6 +57,19 @@ def white_balance(a: np.ndarray, target: float = 240.0) -> np.ndarray:
     return np.clip(a * (target / np.maximum(bg, 1.0)), 0, 255)
 
 
+def white_balance_image(img: Image.Image) -> Image.Image:
+    """Full-resolution white-balanced copy (background estimated on a small copy, for speed)."""
+    rgb = img.convert("RGB")
+    w, h = rgb.size
+    f = max(1, round(max(w, h) / 800))
+    a = rgb_float(rgb.resize((w // f, h // f), Image.Resampling.BILINEAR))
+    s = a.sum(axis=2)
+    bg = np.median(a[s >= np.percentile(s, 85)], axis=0)
+    gain = 240.0 / np.maximum(bg, 1.0)
+    full = np.clip(rgb_float(rgb) * gain, 0, 255).astype(np.uint8)
+    return Image.fromarray(full)
+
+
 def estimate_rbc_diameter(img: Image.Image) -> tuple[float, int]:
     """Median diameter (full-res px) of isolated, round red cells. Returns (diameter, n_cells)."""
     w, h = img.size
