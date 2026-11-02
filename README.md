@@ -41,7 +41,8 @@ Downloads\Leukobloom\
 |---|---|---|---|
 | 1 | Data inventory: labels, patient grouping, fingerprints, duplicate and overlap checks | `scripts/inventory.py` | Done |
 | 2 | Patient-grouped 5-fold split, stratified by diagnosis and camera | `scripts/make_folds.py` | Done |
-| 3 | CPU benchmark (DenseNet training, DinoBloom features) | `scripts/benchmark.py` | Next |
+| 3 | CPU benchmark (DenseNet training, DinoBloom features) | `scripts/benchmark.py` | Done |
+| 3b | White-cell detector check per camera (overlays stay local) | `scripts/check_cells.py`, `leukobloom/cells.py` | Next |
 | 4 | Model B: cell detection → DinoBloom embeddings → MIL | — | |
 | 5 | Model A: DenseNet whole-field training per fold | — | |
 | 6 | Report: all pre-specified analyses | — | |
