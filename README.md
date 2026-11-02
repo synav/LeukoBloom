@@ -33,6 +33,7 @@ Downloads\Leukobloom\
       shareable\         inventory.csv, summary.txt, folds.csv  (codes only)
       PRIVATE\           keys to file names and lab IDs  (never share)
    features\             ← DinoBloom features per image (NEVER in git)
+   cache\                ← prepared fields for Model A (NEVER in git)
    results\              ← model outputs per fold (NEVER in git)
    repo\                 ← this repository
 ```
@@ -45,9 +46,10 @@ Downloads\Leukobloom\
 | 2 | Patient-grouped 5-fold split, stratified by diagnosis and camera | `scripts/make_folds.py` | Done |
 | 3 | CPU benchmark (DenseNet training, DinoBloom features) | `scripts/benchmark.py` | Done |
 | 3b | White-cell detector check per camera (overlays stay local) | `scripts/check_cells.py`, `leukobloom/cells.py` | Done (v2) |
-| 4a | Model B: crop every cell, extract DinoBloom features (resumable) | `scripts/extract_features.py` | Next |
-| 4b | Model B: gated-attention MIL, 5-fold CV and camera-shift (external) scheme | `scripts/train_mil.py`, `leukobloom/mil.py` | |
-| 5 | Model A: DenseNet whole-field training per fold | — | |
+| 4a | Model B: crop every cell, extract DinoBloom features (resumable) | `scripts/extract_features.py` | Done |
+| 4b | Model B: gated-attention MIL, 5-fold CV and camera-shift (external) scheme | `scripts/train_mil.py`, `leukobloom/mil.py` | Done (CV) |
+| 5a | Model A: prepare fields at common scale (red cell ~28 px), white-balanced | `scripts/prepare_fields.py` | Next |
+| 5b | Model A: DenseNet-121 whole-field, one fold per night (resumable) | `scripts/train_densenet.py` | |
 | 6 | Report: all pre-specified analyses | — | |
 
 ## Running (Windows, Python 3.12)
