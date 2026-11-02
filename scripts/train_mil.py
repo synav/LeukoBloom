@@ -84,7 +84,8 @@ def make_bags(folds: pd.DataFrame, fields: dict, seed: int = 2026):
                              fold=-1, set=g.set.iloc[0], image_ids=ids[k:k + PSEUDO_FIELDS]))
     b = pd.DataFrame(bags)
     b["n_cells"] = [sum(len(fields[i]) for i in ids) for ids in b.image_ids]
-    return b[b.n_cells > 0].reset_index(drop=True)
+    # keep CV patients even without usable cells (reported as "no prediction"); drop empty training bags
+    return b[(b.n_cells > 0) | (b.role == "cv")].reset_index(drop=True)
 
 
 def bag_tensor(image_ids, fields, rng=None):
@@ -139,11 +140,13 @@ def predict(models, image_ids, fields):
 # ------------------------------------------------------------------------------ metrics
 def metrics(y_true, y_pred, labels):
     y_true, y_pred = list(y_true), list(y_pred)
-    cm = pd.crosstab(pd.Categorical(y_true, labels), pd.Categorical(y_pred, labels),
+    cols = labels + sorted(set(y_pred) - set(labels))   # e.g. NO_CELLS: never correct
+    cm = pd.crosstab(pd.Categorical(y_true, labels), pd.Categorical(y_pred, cols),
                      rownames=["true"], colnames=["pred"], dropna=False)
-    tp = np.diag(cm.values).astype(float)
+    k = len(labels)
+    tp = np.diag(cm.values[:, :k]).astype(float)
     sens = tp / np.maximum(cm.values.sum(1), 1)
-    prec = tp / np.maximum(cm.values.sum(0), 1)
+    prec = tp / np.maximum(cm.values[:, :k].sum(0), 1)
     f1 = np.where(sens + prec > 0, 2 * sens * prec / np.maximum(sens + prec, 1e-9), 0.0)
     present = cm.values.sum(1) > 0
     return dict(n=len(y_true), acc=tp.sum() / max(len(y_true), 1), bal_acc=sens[present].mean(),
@@ -196,8 +199,17 @@ def main():
 
     pat_rows, field_rows, t0 = [], [], time.time()
     for k, tr, te in splits:
-        models = [train_one(tr.reset_index(drop=True), fields, dim, s) for s in SEEDS]
+        tr = tr[tr.n_cells > 0].reset_index(drop=True)
+        models = [train_one(tr, fields, dim, s) for s in SEEDS]
         for b in te.itertuples():
+            if b.n_cells == 0:   # no usable white cells in any field: no prediction, counted as an error
+                pat_rows.append(dict(patient_code=b.bag, fold=k, set=b.set, label5=b.label5,
+                                     n_fields=len(b.image_ids), n_cells=0,
+                                     **{f"p_{c}": np.nan for c in CLASSES}))
+                for i in b.image_ids:
+                    field_rows.append(dict(image_id=i, patient_code=b.bag, fold=k, label5=b.label5, n_cells=0,
+                                           **{f"p_{c}": np.nan for c in CLASSES}))
+                continue
             p, att = predict(models, b.image_ids, fields)
             pat_rows.append(dict(patient_code=b.bag, fold=k, set=b.set, label5=b.label5, n_fields=len(b.image_ids),
                                  n_cells=sum(len(fields[i]) for i in b.image_ids),
@@ -214,9 +226,11 @@ def main():
 
     pat = pd.DataFrame(pat_rows)
     P = pat[[f"p_{c}" for c in CLASSES]].values
-    pat["pred5"] = [CLASSES[i] for i in P.argmax(1)]
-    p3 = np.stack([P[:, 0] + P[:, 1], P[:, 2] + P[:, 3], P[:, 4]], 1)
-    pat["pred3"] = [C3[i] for i in p3.argmax(1)]
+    ok = ~np.isnan(P).any(1)
+    Pz = np.nan_to_num(P)
+    pat["pred5"] = np.where(ok, [CLASSES[i] for i in Pz.argmax(1)], "NO_CELLS")
+    p3 = np.stack([Pz[:, 0] + Pz[:, 1], Pz[:, 2] + Pz[:, 3], Pz[:, 4]], 1)
+    pat["pred3"] = np.where(ok, [C3[i] for i in p3.argmax(1)], "NO_CELLS")
     pat["label3"] = pat.label5.map(THREE)
     pat.to_csv(out / "patients.csv", index=False)
     pd.DataFrame(field_rows).to_csv(out / "fields.csv", index=False)
@@ -224,6 +238,9 @@ def main():
     title = (f"Model B (DinoBloom-{a.features.upper()} + attention-MIL), scheme={a.scheme}, "
              f"{'all cells' if a.keep_border else 'edge cells excluded'}, seeds={len(SEEDS)}, epochs={EPOCHS}")
     txt = summarise(pat, title)
+    nc = pat[pat.pred5 == "NO_CELLS"]
+    txt += (f"\n\nPatients with no usable cells (no prediction, counted as errors): {len(nc)}"
+            + (f"  {', '.join(nc.patient_code + ' (' + nc.label5 + ')')}" if len(nc) else ""))
     (out / "summary.txt").write_text(txt, encoding="utf-8")
     (a.root / "inventory_out" / "shareable" / f"{tag}_summary.txt").write_text(txt, encoding="utf-8")
     print("\n" + txt)

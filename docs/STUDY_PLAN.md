@@ -77,6 +77,28 @@ training and validation; no duplicate images between samples.
 - **Limitation:** lab IDs identify samples, not patients; two samples from one patient cannot be linked
   without hospital records.
 
+## Model settings (fixed 2 Nov 2026, before any real result)
+
+**Model B (DinoBloom + MIL)**
+- Detector v2: per-field white balance; purple threshold; one red-cell size per camera (median of 40 fields);
+  crops of 3 red-cell diameters, 224x224 px, from the white-balanced field. Cells touching the image edge
+  excluded (sensitivity analysis: included).
+- Features: DinoBloom-B (frozen, `1aurent/vit_base_patch14_224.dinobloom`); DinoBloom-S as sensitivity analysis.
+- Gated-attention MIL (Ilse 2018): LayerNorm, 768->256, attention 128, dropout 0.25. Bag = all cells of a
+  sample; training bags use a random 50-100% of fields and at most 512 cells. 40 epochs, AdamW lr 2e-4,
+  weight decay 1e-4, one-cycle schedule, class-balanced loss, 3 seeds averaged. No tuning on test folds.
+- Training-only images without ID: pseudo-patients of 10 fields per class folder.
+- Field-level probabilities (each field as its own bag) for the aggregation rules shared with Model A.
+- Patients with no usable cells: no prediction, counted as errors in all metrics.
+- Pipeline checks on synthetic features with the real folds: learnable signal recovered; pure noise gives
+  chance-level balanced accuracy (0.22 vs 0.20), i.e. no leakage between folds.
+
+**Model A (LeukoAI-style)**: single 5-class DenseNet-121, ImageNet start, 448x448, full fine-tuning;
+published-style rule applied to its probabilities (leukemia = 1 - p(no leukemia); acute = p(ALL)+p(AML)).
+
+**Primary metrics**: patient-level balanced accuracy and macro-F1 (5-class and 3-class); accuracy reported
+but not primary (dominated by AML and no-leukemia).
+
 ## Pre-specified analyses
 
 1. **Primary:** patient-level 5-class macro-F1 and 3-class (acute/chronic/no leukemia) accuracy,
