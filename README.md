@@ -41,7 +41,7 @@ Downloads\Leukobloom\
 |---|---|---|---|
 | 1 | Data inventory: labels, patient grouping, fingerprints, duplicate and overlap checks | `scripts/inventory.py` | Done |
 | 2 | Patient-grouped 5-fold split, stratified by diagnosis and camera | `scripts/make_folds.py` | Done |
-| 3 | CPU benchmark (DenseNet training, DinoBloom features) | — | Next |
+| 3 | CPU benchmark (DenseNet training, DinoBloom features) | `scripts/benchmark.py` | Next |
 | 4 | Model B: cell detection → DinoBloom embeddings → MIL | — | |
 | 5 | Model A: DenseNet whole-field training per fold | — | |
 | 6 | Report: all pre-specified analyses | — | |
@@ -53,6 +53,14 @@ cd %USERPROFILE%\Downloads\Leukobloom\repo
 py -3.12 -m pip install -r requirements.txt
 py -3.12 scripts\inventory.py
 py -3.12 scripts\make_folds.py
+```
+
+Model steps also need CPU PyTorch and timm (one-time install):
+
+```
+py -3.12 -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+py -3.12 -m pip install timm huggingface_hub
+py -3.12 scripts\benchmark.py
 ```
 
 Both scripts default to the folder layout above; use `--help` for other paths.
