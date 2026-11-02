@@ -30,9 +30,10 @@ Downloads\Leukobloom\
       training\          ALL, AML, APML, CLL, CML, NORMAL, REACTIVE CELLS
       validation\        one folder per case, e.g. AML_V001, Normal_N003
    inventory_out\        ← script outputs (NEVER in git)
-   features\             ← DinoBloom features per image (NEVER in git)
       shareable\         inventory.csv, summary.txt, folds.csv  (codes only)
       PRIVATE\           keys to file names and lab IDs  (never share)
+   features\             ← DinoBloom features per image (NEVER in git)
+   results\              ← model outputs per fold (NEVER in git)
    repo\                 ← this repository
 ```
 
@@ -45,7 +46,7 @@ Downloads\Leukobloom\
 | 3 | CPU benchmark (DenseNet training, DinoBloom features) | `scripts/benchmark.py` | Done |
 | 3b | White-cell detector check per camera (overlays stay local) | `scripts/check_cells.py`, `leukobloom/cells.py` | Done (v2) |
 | 4a | Model B: crop every cell, extract DinoBloom features (resumable) | `scripts/extract_features.py` | Next |
-| 4b | Model B: attention-MIL per fold | — | |
+| 4b | Model B: gated-attention MIL, 5-fold CV and camera-shift (external) scheme | `scripts/train_mil.py`, `leukobloom/mil.py` | |
 | 5 | Model A: DenseNet whole-field training per fold | — | |
 | 6 | Report: all pre-specified analyses | — | |
 
