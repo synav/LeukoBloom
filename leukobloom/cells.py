@@ -22,6 +22,7 @@ from PIL import Image
 from scipy import ndimage as ndi
 from skimage import measure, morphology, segmentation, feature
 
+DETECTOR_VERSION = "v2"   # v2: per-field white balance before colour thresholds
 WORK_RBC_PX = 40.0        # images are rescaled so a red cell is ~40 px wide for detection
 PURPLE_THR = 35.0         # blue - red (0-255 scale); pink RBCs are negative, background ~0-15
 CROP_RBC = 3.0            # crop side = 3 red-cell diameters
@@ -47,12 +48,21 @@ def rgb_float(img: Image.Image) -> np.ndarray:
     return np.asarray(img.convert("RGB"), dtype=np.float32)
 
 
+def white_balance(a: np.ndarray, target: float = 240.0) -> np.ndarray:
+    """Per-field white balance: scale each channel so the slide background (brightest ~15% of
+    pixels) is neutral grey-white. Removes camera / lamp colour casts before colour thresholds."""
+    s = a.sum(axis=2)
+    bright = s >= np.percentile(s, 85)
+    bg = np.median(a[bright], axis=0)
+    return np.clip(a * (target / np.maximum(bg, 1.0)), 0, 255)
+
+
 def estimate_rbc_diameter(img: Image.Image) -> tuple[float, int]:
     """Median diameter (full-res px) of isolated, round red cells. Returns (diameter, n_cells)."""
     w, h = img.size
     f = 4.0 if max(w, h) > 2500 else 2.0
     small = img.convert("RGB").resize((int(w / f), int(h / f)), Image.Resampling.BILINEAR)
-    a = rgb_float(small)
+    a = white_balance(rgb_float(small))
     R, G, B = a[..., 0], a[..., 1], a[..., 2]
     # red cells: clearly darker than background in green, and pink (red > blue)
     bg = np.percentile(G, 95)
@@ -84,7 +94,7 @@ def detect_cells(img: Image.Image, rbc_px: float | None = None) -> tuple[list[Ce
     w, h = img.size
     small = img.convert("RGB").resize((max(1, round(w * scale)), max(1, round(h * scale))),
                                       Image.Resampling.BILINEAR)
-    a = rgb_float(small)
+    a = white_balance(rgb_float(small))
     purple = a[..., 2] - a[..., 0]
     purple = ndi.gaussian_filter(purple, 1.0)
     mask = purple > PURPLE_THR
