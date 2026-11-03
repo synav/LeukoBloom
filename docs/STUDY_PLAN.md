@@ -101,6 +101,18 @@ Same common physical scale and white balance as Model B (details in `scripts/tra
 **Primary metrics:** patient-level balanced accuracy and macro-F1 (5-class and 3-class); accuracy reported
 but not primary.
 
+**Reporting conventions (fixed 3 Nov 2026, before any Model A result was seen; `scripts/report.py`)**
+- Aggregation rules ported from LeukoAI-dev onto one 5-class probability vector per field
+  (`leukobloom/rules.py`): leukemic field if 1 − p(no leukemia) > 0.5; chronic field if p(CLL)+p(CML) >
+  p(ALL)+p(AML); field class = top class; published threshold T = 3 (leukemia if > 3 leukemic fields);
+  published chronic step = at least 2 chronic fields; ties to ALL/CLL. Known-answer tests in `tests/`.
+- Primary methods: **B-MIL** (Model B) vs **A-published** (Model A, published rule on its field
+  probabilities). Like-for-like: both models' field probabilities through all rules.
+- Probability-based analyses (AUROC, calibration, deferral, decision curve) use B-MIL's output and, for
+  Model A, the mean of field probabilities (A-meanprob).
+- CIs: bootstrap over patients, 2,000 resamples, seed 2026; Wilson for leukemia sensitivity/specificity;
+  paired bootstrap + exact McNemar for B − A.
+
 ## Pre-specified analyses
 
 1. **Primary:** patient-level 5-class macro-F1 and 3-class (acute/chronic/no leukemia) accuracy, Model A vs
