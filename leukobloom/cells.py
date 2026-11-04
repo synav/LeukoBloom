@@ -99,6 +99,57 @@ def estimate_rbc_diameter(img: Image.Image) -> tuple[float, int]:
     return float(np.median(d) * f), int(len(d))
 
 
+def _dark_mask(img: Image.Image, boxes=(), f: float = 1.0) -> np.ndarray:
+    """Cells darker than the LOCAL background in the darkest channel (works for pink or bluish red
+    cells and uneven illumination). Pixels inside `boxes` (x, y, w, h; full-res px) are cleared."""
+    from skimage.filters import threshold_otsu
+    w, h = img.size
+    a = rgb_float(img.convert("RGB").resize((max(1, int(w / f)), max(1, int(h / f))), Image.Resampling.BILINEAR))
+    g = a.min(axis=2)
+    s = max(15, int(max(g.shape) / 10))
+    bg = ndi.gaussian_filter(ndi.maximum_filter(ndi.median_filter(g, 5), size=s), s / 2)
+    r = g / np.maximum(bg, 1.0)
+    m = r < threshold_otsu(r)
+    for x, y, bw, bh in boxes:
+        m[int(y / f):int((y + bh) / f) + 1, int(x / f):int((x + bw) / f) + 1] = False
+    return ndi.binary_fill_holes(ndi.binary_opening(m, morphology.disk(2)))
+
+
+def _inner_regions(m: np.ndarray):
+    lab = measure.label(m)
+    for r in measure.regionprops(lab):
+        minr, minc, maxr, maxc = r.bbox
+        if minr == 0 or minc == 0 or maxr == lab.shape[0] or maxc == lab.shape[1]:
+            continue
+        yield r
+
+
+def estimate_rbc_diameter_any_stain(img: Image.Image, exclude_boxes=()) -> tuple[float, int]:
+    """Red-cell diameter (full-res px) without colour rules, for external data whose red cells are not
+    pink. White cells are excluded with known boxes (e.g. expert annotations). Same definition as
+    estimate_rbc_diameter (median equivalent diameter of isolated round cells); on the public SSMC
+    (Zenodo) fields the two agree within ~3%. Returns (nan, n) when fewer than 5 cells qualify."""
+    w, h = img.size
+    f = max(1.0, max(w, h) / 800)
+    d = [r.equivalent_diameter_area for r in _inner_regions(_dark_mask(img, exclude_boxes, f))
+         if r.area >= 50 and r.solidity >= 0.93 and r.eccentricity <= 0.6]
+    if len(d) < 5:
+        return float("nan"), len(d)
+    d = np.array(d)
+    med = np.median(d)
+    d = d[(d > 0.6 * med) & (d < 1.4 * med)]
+    return float(np.median(d) * f), int(len(d))
+
+
+def red_cell_aspect(img: Image.Image, exclude_boxes=()) -> tuple[float, int]:
+    """Median height/width of red cells: ~1.0 for an undistorted image; >1 if the image was squeezed
+    horizontally (e.g. a 16:9 photo stored as a square). Returns (ratio, n)."""
+    m = _dark_mask(img, exclude_boxes, 1.0)
+    q = [(r.bbox[2] - r.bbox[0]) / max(1, r.bbox[3] - r.bbox[1]) for r in _inner_regions(m)
+         if r.area > 100 and r.solidity > 0.95]
+    return (float(np.median(q)) if q else float("nan")), len(q)
+
+
 def detect_cells(img: Image.Image, rbc_px: float | None = None) -> tuple[list[Cell], float]:
     """Find white cells. Returns (cells, red-cell diameter in full-res px)."""
     if rbc_px is None:

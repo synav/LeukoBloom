@@ -27,6 +27,7 @@ Full design, data decisions and pre-specified analyses: [`docs/STUDY_PLAN.md`](d
 ```
 Downloads\Leukobloom\
    data\                 ← images (NEVER in git)
+   external\LeukemiaAttri\ ← public dataset, 5 export parts as downloaded
       training\          ALL, AML, APML, CLL, CML, NORMAL, REACTIVE CELLS
       validation\        one folder per case, e.g. AML_V001, Normal_N003
    inventory_out\        ← script outputs (NEVER in git)
@@ -52,6 +53,7 @@ Downloads\Leukobloom\
 | 5b | Model A: DenseNet-121 whole-field, one fold per night (resumable) | `scripts/train_densenet.py` | Running |
 | 6b | Cell gallery: top-attention cells per patient for hematologist review (pictures stay local) | `scripts/cell_gallery.py` | Ready |
 | 6 | Report: all pre-specified analyses, Model A vs B | `scripts/report.py`, `leukobloom/rules.py`, `leukobloom/metrics.py` | Ready |
+| 7 | Public-data robustness test: LeukemiaAttri 100x subsets, frozen models, expert boxes for Model B | `scripts/external_leukemiaattri.py` | Ready |
 
 ## Running (Windows, Python 3.12)
 
