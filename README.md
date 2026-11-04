@@ -50,6 +50,7 @@ Downloads\Leukobloom\
 | 4b | Model B: gated-attention MIL, 5-fold CV and camera-shift (external) scheme | `scripts/train_mil.py`, `leukobloom/mil.py` | Done (CV) |
 | 5a | Model A: prepare fields at common scale (red cell ~28 px), white-balanced | `scripts/prepare_fields.py` | Done |
 | 5b | Model A: DenseNet-121 whole-field, one fold per night (resumable) | `scripts/train_densenet.py` | Running |
+| 6b | Cell gallery: top-attention cells per patient for hematologist review (pictures stay local) | `scripts/cell_gallery.py` | Ready |
 | 6 | Report: all pre-specified analyses, Model A vs B | `scripts/report.py`, `leukobloom/rules.py`, `leukobloom/metrics.py` | Ready |
 
 ## Running (Windows, Python 3.12)
