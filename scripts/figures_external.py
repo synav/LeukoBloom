@@ -107,7 +107,7 @@ def main():
         ax.set_xticks(range(4), [SUB_LABEL[s] for s in SUBSETS], fontsize=7)
         for x, t in ((0.5, "High-cost\nmicroscope"), (2.5, "Low-cost\nmicroscope")):
             ax.text(x, -0.09, t, transform=ax.get_xaxis_transform(), ha="center", va="top", fontsize=7, color=INK)
-        ax.set(ylim=(0, 1.02), title=title, xlim=(-0.5, 3.5))
+        ax.set(ylim=(0, 1.06), title=title, xlim=(-0.5, 3.5))
         ax.grid(axis="x", visible=False)
         if ax is axs[0]:
             ax.set_ylabel("Share of 47 patients")
