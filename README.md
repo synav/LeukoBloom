@@ -54,6 +54,7 @@ Downloads\Leukobloom\
 | 6b | Cell gallery: top-attention cells per patient for hematologist review (pictures stay local) | `scripts/cell_gallery.py` | Ready |
 | 6 | Report: all pre-specified analyses, Model A vs B | `scripts/report.py`, `leukobloom/rules.py`, `leukobloom/metrics.py` | Ready |
 | 6c | Publication figures: ROC with AUROC CIs, confusion matrices, paired differences, field count, calibration/deferral | `scripts/figures.py` | Ready |
+| 7b | Post hoc: MIL trained within LeukemiaAttri (patient-grouped 5-fold CV; frozen DinoBloom) and high- → low-cost microscope | `scripts/leukemiaattri_cv.py` | Ready |
 | 7 | Public-data robustness test: LeukemiaAttri 100x subsets, frozen models, expert boxes for Model B | `scripts/external_leukemiaattri.py` | Ready |
 
 ## Running (Windows, Python 3.12)
