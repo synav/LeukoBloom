@@ -70,6 +70,7 @@ ASPECTS = {"1:1": 1.0, "4:3": 4 / 3, "16:9": 16 / 9}
 TARGET_RBC_A = 28.0
 NAME_RE = re.compile(r"^(\d+)_(\d+)_1000_([A-Za-z]+)\.png$", re.I)
 EDGE_PX = 2
+LABELS_VERSION = 2   # v2: boxes merged when a json lists one image entry per box (H_100X_C1 train)
 
 
 # ------------------------------------------------------------------------------ index and labels
@@ -87,12 +88,15 @@ def read_labels(dirs):
     coco, yolo = {}, {}
 
     def add_coco(j, split):
-        names = {im["id"]: im["file_name"] for im in j["images"]}
-        boxes = defaultdict(list)
+        # some files list the same image once per box (different ids, same file name): merge by file name
+        names = {im["id"]: Path(im["file_name"]).name for im in j["images"]}
+        by_file = {fn: [] for fn in names.values()}
         for an in j["annotations"]:
-            boxes[an["image_id"]].append(an["bbox"])
-        for iid, fn in names.items():
-            coco.setdefault((split, Path(fn).name), boxes.get(iid, []))
+            fn = names.get(an["image_id"])
+            if fn is not None and list(an["bbox"]) not in by_file[fn]:
+                by_file[fn].append(list(an["bbox"]))
+        for fn, b in by_file.items():
+            coco.setdefault((split, fn), b)   # first copy of a json across export parts wins
 
     def add_yolo(text, split, fn):
         b = []
@@ -512,10 +516,12 @@ def main():
     res = a.root / "results" / ("external_leukemiaattri" + (f"_limit{a.limit}" if a.limit else ""))
     res.mkdir(parents=True, exist_ok=True)
 
-    if (res / "index.csv").exists() and (res / "scale.json").exists():
+    if (res / "index.csv").exists() and (res / "scale.json").exists() and \
+            json.loads((res / "scale.json").read_text()).get("_labels_version") == LABELS_VERSION:
         idx = pd.read_csv(res / "index.csv", keep_default_na=False, na_values=[""])
         idx["boxes"] = idx.boxes.fillna("")
         scale = json.loads((res / "scale.json").read_text())
+        scale.pop("_labels_version", None)
         print(f"Index loaded: {len(idx)} fields, {idx.patient.nunique()} patients")
     else:
         print("Indexing 100x images and expert labels ...", flush=True)
@@ -526,7 +532,9 @@ def main():
         overrides = {k: float(v) for k, v in (s.split("=") for s in a.aspect.split(",") if s)}
         idx, scale = measure_scale(ds, idx, overrides)
         idx.to_csv(res / "index.csv", index=False)
-        (res / "scale.json").write_text(json.dumps(scale, indent=1))
+        (res / "scale.json").write_text(json.dumps({**scale, "_labels_version": LABELS_VERSION}, indent=1))
+        if (res / "qc").exists():
+            shutil.rmtree(res / "qc")
         qc_pictures(ds, idx, scale, res / "qc")
         print(f"QC pictures: {res / 'qc'}")
     if a.model == "b":
