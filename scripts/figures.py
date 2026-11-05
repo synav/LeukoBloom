@@ -108,8 +108,8 @@ def main():
 
     # ---------------------------------------------------------------- ROC
     tasks = [(LABEL[c], y5 == c, PB[:, i], PA[:, i]) for i, c in enumerate(CLASSES[:4])]
-    tasks.append(("Acute leukemia (ALL + AML)", np.isin(y5, ["ALL", "AML"]), PB[:, 0] + PB[:, 1], PA[:, 0] + PA[:, 1]))
-    tasks.append(("Any leukemia (screening)", y5 != "NO_LEUKEMIA", 1 - PB[:, 4], 1 - PA[:, 4]))
+    tasks.append(("Acute (ALL + AML)", np.isin(y5, ["ALL", "AML"]), PB[:, 0] + PB[:, 1], PA[:, 0] + PA[:, 1]))
+    tasks.append(("Any leukemia", y5 != "NO_LEUKEMIA", 1 - PB[:, 4], 1 - PA[:, 4]))
     fig, axs = plt.subplots(2, 3, figsize=(7.2, 5.0))
     for ax, (title, pos, sb, sa) in zip(axs.flat, tasks):
         ci, diff = auc_ci([sb, sa], pos, a.boot)
@@ -118,7 +118,7 @@ def main():
             fx, ty = roc_curve(s, pos)
             ax.plot(fx, ty, c=c, lw=1.8, ls=ls, label=f"{lab}  {v:.2f} ({lo:.2f}–{hi:.2f})",
                     drawstyle="steps-post")
-        if title.startswith("Any"):
+        if title == "Any leukemia":
             for col, c, mk, lab in (("A-published", C_A, "s", "Model A, published rule"),
                                     (None, C_B, "o", "Model B at p ≥ 0.5")):
                 call = (pats[col].values != "NO_LEUKEMIA") & (pats[col].values != "NO_CELLS") if col \
@@ -230,14 +230,22 @@ def main():
     fig, axs = plt.subplots(1, 2, figsize=(7.0, 3.1))
     ax = axs[0]
     ax.plot([0, 1], [0, 1], ls=":", c=INK2, lw=0.8)
+    n_bins = 6   # equal-count bins (~23 patients each): stable with small samples
     for m, c, ls in (("A-meanprob", C_A, "--"), ("B-MIL", C_B, "-")):
-        f = tab / f"calibration_{m}.csv"
-        if f.exists():
-            cb = pd.read_csv(f)
-            P = PB if m == "B-MIL" else PA
-            b = M.brier(P, y5)
-            ax.plot(cb.confidence, cb.accuracy, c=c, ls=ls, lw=1.6, marker="o", ms=4.5, mec="white", mew=0.8,
-                    label=f"{NAMES[m]} (Brier {b:.2f})")
+        P = PB if m == "B-MIL" else PA
+        conf = P.max(1)
+        ok = conf == conf
+        correct = P.argmax(1) == np.array([CLASSES.index(v) for v in y5])
+        order = np.argsort(conf[ok])
+        groups = np.array_split(order, n_bins)
+        xs = [conf[ok][g].mean() for g in groups]
+        ys = [correct[ok][g].mean() for g in groups]
+        ns = [len(g) for g in groups]
+        b = M.brier(P, y5)
+        ax.plot(xs, ys, c=c, ls=ls, lw=1.6, label=f"{NAMES[m]} (Brier {b:.2f})")
+        ax.scatter(xs, ys, s=[8 + 1.5 * n for n in ns], c=c, edgecolors="white", linewidths=0.8, zorder=3)
+    ax.text(0.03, 0.97, f"{n_bins} bins with equal patient counts", transform=ax.transAxes, fontsize=6.5,
+            color=INK2, va="top")
     ax.set(xlim=(0, 1.02), ylim=(0, 1.02), xlabel="Predicted confidence (top class)", ylabel="Observed accuracy",
            title="Calibration", aspect="equal")
     ax.legend(loc="lower right")
