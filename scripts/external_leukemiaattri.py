@@ -465,6 +465,22 @@ def write_summary(a, idx, scale, res):
                 L += [f"| {lab} | " + " | ".join(str(v) for v in row) + " |" for lab, row in zip(LABELS4, m)
                       if row.sum()]
                 L.append("")
+        # same patient under the four microscope/camera conditions (patient key = diagnosis + number)
+        allp["case"] = allp.patient.str.split("/").str[1]
+        L += ["## Consistency across microscopes and cameras", "",
+              "Same patients imaged under each condition. Consistent = identical prediction in every subset the "
+              "patient appears in; majority = most frequent prediction across subsets (ties: none counted correct).",
+              "", "| Method | Patients | Consistent | Majority correct |", "|---|---|---|---|"]
+        for name in methods:
+            t = allp[allp.method == name]
+            cons, maj = [], []
+            for _, g in t.groupby("case"):
+                vc = g.pred.value_counts()
+                cons.append(len(vc) == 1)
+                top = vc.index[0] if (len(vc) == 1 or vc.iloc[0] > vc.iloc[1]) else None
+                maj.append(top == g.label5.iloc[0])
+            L.append(f"| {name} | {len(cons)} | {np.mean(cons):.2f} | {np.mean(maj):.2f} |")
+        L.append("")
         L += ["## Patient predictions (codes are the dataset's own patient numbers)", "",
               "| Patient | True | " + " | ".join(methods) + " |", "|---|---|" + "---|" * len(methods)]
         wide = allp.pivot_table(index=["patient", "label5"], columns="method", values="pred", aggfunc="first")
