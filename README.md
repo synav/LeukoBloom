@@ -53,6 +53,7 @@ Downloads\Leukobloom\
 | 5b | Model A: DenseNet-121 whole-field, one fold per night (resumable) | `scripts/train_densenet.py` | Running |
 | 6b | Cell gallery: top-attention cells per patient for hematologist review (pictures stay local) | `scripts/cell_gallery.py` | Ready |
 | 6 | Report: all pre-specified analyses, Model A vs B | `scripts/report.py`, `leukobloom/rules.py`, `leukobloom/metrics.py` | Ready |
+| 6c | Publication figures: ROC with AUROC CIs, confusion matrices, paired differences, field count, calibration/deferral | `scripts/figures.py` | Ready |
 | 7 | Public-data robustness test: LeukemiaAttri 100x subsets, frozen models, expert boxes for Model B | `scripts/external_leukemiaattri.py` | Ready |
 
 ## Running (Windows, Python 3.12)
